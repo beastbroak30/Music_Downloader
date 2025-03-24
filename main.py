@@ -59,10 +59,32 @@ def display_results(results: Dict[str, Any]) -> None:
         print(f"   Title: {title}")
         print(f"   URL: {video_url}")
 
+def sanitize_filename(filename: str) -> str:
+    """Remove or replace invalid characters in filename."""
+    # Replace invalid characters with underscore
+    invalid_chars = '<>:"/\\|?*'
+    for char in invalid_chars:
+        filename = filename.replace(char, '_')
+    
+    # Replace any other non-ASCII characters with underscore
+    filename = ''.join(char if ord(char) < 128 else '_' for char in filename)
+    
+    # Remove leading/trailing spaces and dots
+    filename = filename.strip('. ')
+    
+    # Limit filename length
+    if len(filename) > 200:
+        filename = filename[:200]
+    
+    return filename
+
 def download_mp3(video_url: str, title: str) -> bool:
     """Download MP3 from YouTube video URL."""
+    # Sanitize the filename
+    safe_title = sanitize_filename(title)
+    filename = f"music/{safe_title}.mp3"
+    
     # Check if file already exists
-    filename = f"music/{title}.mp3"
     if os.path.exists(filename):
         while True:
             response = input(f"\nFile '{filename}' already exists. Do you want to download it again? (y/n): ").lower()
@@ -100,7 +122,7 @@ def download_mp3(video_url: str, title: str) -> bool:
             total_size = int(mp3_response.headers.get('content-length', 0))
             block_size = 1024  # 1 Kilobyte
             
-            filename = f"music/{title}.mp3"
+            filename = f"music/{safe_title}.mp3"
             
             with open(filename, 'wb') as f, tqdm(
                 desc=title,
@@ -166,7 +188,7 @@ def main():
                     choice_idx = int(choice)
                     if 0 <= choice_idx < len(results['videos']):
                         video = results['videos'][choice_idx]
-                        title = video['name'].replace('/', '_').replace('\\', '_')
+                        title = video['name']  # Remove the replace calls here
                         if download_mp3(video['url'], title):
                             break
                     else:
